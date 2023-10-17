@@ -1,0 +1,145 @@
+
+image_matrix = [
+    [0, 0, 0, 0, 0],
+    [0, 255, 255, 255, 0],
+    [0, 255, 255, 255, 0],
+    [0, 255, 255, 255, 0],
+    [0, 0, 0, 0, 0]
+]
+
+# Displaying the image matrix
+for row in image_matrix:
+    row_str = ""
+    for pixel in row:
+        if pixel == 0:
+            row_str += " . "  # Print a dot for 0 (black)
+        else:
+            row_str += " # "  # Print a hash for 255 (white)
+    print(row_str)
+def calculate_histogram(image):
+    histogram = [0] * 256
+    for row in image:
+        for pixel in row:
+            histogram[pixel] += 1
+    return histogram
+
+# Display the histogram
+def display_histogram(histogram):
+    for i, count in enumerate(histogram):
+        print(f"Intensity {i}: {'*' * count}")
+
+image_histogram = calculate_histogram(image_matrix)
+display_histogram(image_histogram)
+def histogram_equalization(image, image_histogram):
+    total_pixels = sum(image_histogram)
+    cum_histogram = [sum(image_histogram[:i+1]) for i in range(len(image_histogram))]
+    equalized_image = [[0 for _ in range(len(row))] for row in image]
+
+    for i in range(len(image)):
+        for j in range(len(image[i])):
+            equalized_image[i][j] = 255 * cum_histogram[image[i][j]] / total_pixels
+
+    return equalized_image
+
+# Display the image
+def display_image(image):
+    for row in image:
+        row_str = ""
+        for pixel in row:
+            row_str += f"{int(pixel):<4}"
+        print(row_str)
+equalized_image = histogram_equalization(image_matrix, image_histogram)
+display_image(equalized_image)
+
+# Calculate the first-order derivative in the x-direction
+def first_order_derivative_x(image):
+    derivative_x = [[0 for _ in range(len(image[0]))] for _ in range(len(image))]
+    for i in range(len(image)):
+        for j in range(1, len(image[0])):
+            derivative_x[i][j] = image[i][j] - image[i][j-1]
+    return derivative_x
+
+# Calculate the second-order derivative in the x-direction
+def second_order_derivative_x(image):
+    derivative_x = [[0 for _ in range(len(image[0]))] for _ in range(len(image))]
+    for i in range(len(image)):
+        for j in range(1, len(image[0])-1):
+            derivative_x[i][j] = image[i][j+1] - 2 * image[i][j] + image[i][j-1]
+    return derivative_x
+
+# Display the derivative matrices
+def display_derivative(derivative_matrix):
+    for row in derivative_matrix:
+        row_str = ""
+        for pixel in row:
+            row_str += f"{int(pixel):<5}"
+        print(row_str)
+
+print("First Order Derivative in X-Direction:")
+derivative_x_matrix = first_order_derivative_x(image_matrix)
+display_derivative(derivative_x_matrix)
+
+print("\nSecond Order Derivative in X-Direction:")
+second_derivative_x_matrix = second_order_derivative_x(image_matrix)
+display_derivative(second_derivative_x_matrix)
+
+# Sobel operators for gradient calculation
+sobel_x = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
+sobel_y = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
+
+# Perform convolution operation
+def convolve2D(image, kernel):
+    m, n = len(kernel), len(kernel[0])
+    y, x = len(image), len(image[0])
+    y = y - m + 1
+    x = x - n + 1
+    new_image = [[0 for _ in range(x)] for _ in range(y)]
+    for i in range(y):
+        for j in range(x):
+            new_image[i][j] = sum(sum(image[i+k][j+l] * kernel[k][l] for l in range(n)) for k in range(m)
+            )
+    return new_image
+
+# Calculate image gradients using Sobel operators
+gradient_x = convolve2D(image_matrix, sobel_x)
+gradient_y = convolve2D(image_matrix, sobel_y)
+# Discrete Fourier Transform (DFT) calculation
+def dft2D(image):
+    M = len(image)
+    N = len(image[0])
+    dft_result = [[0 for _ in range(N)] for _ in range(M)]
+
+    for u in range(M):
+        for v in range(N):
+            sum_val = 0
+            for x in range(M):
+                for y in range(N):
+                    pixel_val = image[x][y]
+                    term = pixel_val * (complex((2 * 3.1415 * (u * x / M + v * y / N))).exp())
+                    sum_val += term
+            dft_result[u][v] = sum_val
+    return dft_result
+# Inverse Discrete Fourier Transform (IDFT) calculation
+def idft2D(dft_result):
+    M = len(dft_result)
+    N = len(dft_result[0])
+    idft_image = [[0 for _ in range(N)] for _ in range(M)]
+
+    for x in range(M):
+        for y in range(N):
+            sum_val = 0
+            for u in range(M):
+                for v in range(N):
+                    dft_val = dft_result[u][v]
+                    term = dft_val * (complex((-2 * 3.1415 * (u * x / M + v * y / N))).exp())
+                    sum_val += term
+            idft_image[x][y] = int(sum_val.real / (M * N))
+    return idft_image
+
+dft_result = dft2D(image_matrix)
+enhanced_image_matrix = idft2D(dft_result)
+
+# Display enhanced image
+for row in enhanced_image_matrix:
+    print(row)
+
